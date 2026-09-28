@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluxo de Caixa | Carlinhos</title>
+<style>
+:root{
+  --bg:#f7f7f7; --card:#fff; --text:#202020; --muted:#707070;
+  --primary:#ea1d2c; --primary2:#c91524; --green:#16a34a; --red:#dc2626;
+  --orange:#ff7a00; --border:#e3e3e3; --shadow:0 8px 25px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0}
+.hidden{display:none!important}
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#b90f1d,#ea1d2c)}
+.login-box{width:100%;max-width:390px;background:white;border-radius:18px;padding:32px;box-shadow:0 25px 60px rgba(0,0,0,.25)}
+.logo{width:52px;height:52px;border-radius:14px;background:#ea1d2c;color:#fff;display:grid;place-items:center;font-weight:800;font-size:25px;margin-bottom:18px}
+.login h1{margin:0 0 5px}.login p{color:var(--muted);margin:0 0 24px}
+.field{margin-bottom:14px}.field label{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+.field input,.field select{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;outline:none;background:#fff}
+.field input:focus,.field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.btn{padding:11px 15px;border-radius:9px;font-weight:700}
+.btn-primary{background:var(--primary);color:white}.btn-primary:hover{background:var(--primary2)}
+.btn-light{background:#eef2f7;color:#263246}.btn-danger{background:#fee2e2;color:#991b1b}
+.login .btn{width:100%;margin-top:5px}.error{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
+
+.app-header{background:#202020;color:#fff;padding:15px 22px;display:flex;align-items:center;justify-content:space-between;gap:15px}
+.brand{font-weight:800;font-size:18px}.brand small{display:block;font-weight:400;color:#94a3b8;font-size:11px;margin-top:2px}
+.header-actions{display:flex;gap:8px}
+.header-actions button{padding:8px 11px;border-radius:8px;background:#333;color:#fff}
+
+.container{max-width:1250px;margin:auto;padding:22px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:18px;flex-wrap:wrap}
+.topbar h2{margin:0}.topbar p{margin:4px 0 0;color:var(--muted);font-size:13px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
+.kpi-label{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.kpi-value{font-size:25px;font-weight:800;margin-top:8px}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--primary)}.orange{color:var(--orange)}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-bottom:16px}
+.card h3{margin:0 0 14px;font-size:16px}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.form-grid .full{grid-column:1/-1}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:5px}
+.hint{font-size:12px;color:var(--muted);margin-top:8px}
+.result-box{margin-top:15px;padding:15px;border-radius:11px;background:#fff1f2;border:1px solid #fecdd3}
+.result-big{font-size:27px;font-weight:800;color:#ea1d2c;margin:3px 0}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid #edf0f4}
+th{font-size:11px;text-transform:uppercase;color:var(--muted)}
+td:last-child,th:last-child{text-align:right}
+.empty{text-align:center;color:var(--muted);padding:22px}
+.badge{display:inline-block;padding:4px 8px;border-radius:99px;font-size:11px;font-weight:700}
+.badge-pendente{background:#fff7ed;color:#c2410c}.badge-pago{background:#dcfce7;color:#166534}
+.section-title{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.week-info{padding:12px;background:#f8fafc;border-radius:9px;margin-top:10px;font-size:13px}
+.progress{height:10px;background:#e5e7eb;border-radius:99px;overflow:hidden;margin:8px 0}
+.progress span{display:block;height:100%;background:#ea1d2c;border-radius:99px;width:0%}
+.small-btn{padding:6px 8px;border-radius:7px;background:#f1f5f9;font-size:12px}
+footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
+@media(max-width:900px){.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+@media(max-width:560px){.container{padding:13px}.cards{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.form-grid .full{grid-column:auto}.app-header{padding:12px 14px}.header-actions button{font-size:11px}}
+
+.week-balance{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.balance-card{border:1px solid var(--border);border-radius:11px;padding:14px;background:#fff}
+.balance-title{font-size:12px;color:var(--muted);font-weight:700;text-transform:uppercase}
+.balance-value{font-size:23px;font-weight:800;margin-top:5px}
+.balance-entry{color:#16803a}.balance-expense{color:#dc2626}.balance-result{color:#ea1d2c}
+.balance-bar{height:18px;background:#eee;border-radius:99px;overflow:hidden;display:flex;margin-top:12px}
+.balance-bar .entries{background:#16a34a;height:100%}
+.balance-bar .expenses{background:#ea1d2c;height:100%}
+.week-table{margin-top:14px}
+.week-table th,.week-table td{text-align:right}
+.week-table th:first-child,.week-table td:first-child{text-align:left}
+@media(max-width:560px){.week-balance{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<section id="login" class="login">
+  <div class="login-box">
+    <div class="logo">C</div>
+    <h1>Fluxo de Caixa</h1>
+    <p>Controle interno de ganhos, gastos e metas.</p>
+    <div class="field">
+      <label>Usuário</label>
+      <input id="loginUser" autocomplete="username" value="Carlinhos">
+    </div>
+    <div class="field">
+      <label>Senha</label>
+      <input id="loginPass" type="password" autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary" onclick="login()">Entrar</button>
+    <div id="loginError" class="error"></div>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+<header class="app-header">
+  <div class="brand">Fluxo de Caixa | Carlinhos<small>Controle financeiro interno</small></div>
+  <div class="header-actions">
+    <button onclick="exportar()">Exportar backup</button>
+    <button onclick="document.getElementById('importFile').click()">Importar</button>
+    <button onclick="logout()">Sair</button>
+    <input id="importFile" type="file" accept=".json" hidden onchange="importar(event)">
+  </div>
+</header>
+
+<main class="container">
+  <div class="topbar">
+    <div>
+      <h2>Visão geral</h2>
+      <p>Atualizado automaticamente conforme você lança os dados.</p>
+    </div>
+    <div class="field" style="margin:0;min-width:180px">
+      <select id="periodo" onchange="render()">
+        <option value="week">Esta semana</option>
+        <option value="month">Este mês</option>
+        <option value="all">Tudo</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="kpi-label">Caixa inicial</div><div id="kpiCaixa" class="kpi-value">R$ 0,00</div></div>
+    <div class="card"><div class="kpi-label">Ganhos no período</div><div id="kpiGanhos" class="kpi-value green">R$ 0,00</div></div>
+    <div class="card"><div class="kpi-label">Gastos pendentes</div><div id="kpiGastos" class="kpi-value red">R$ 0,00</div></div>
+    <div class="card"><div class="kpi-label">Saldo projetado</div><div id="kpiSaldo" class="kpi-value blue">R$ 0,00</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Lançar ganho</h3>
+      <div class="form-grid">
+        <div class="field"><label>Data</label><input id="ganhoData" type="date"></div>
+        <div class="field"><label>Valor (R$)</label><input id="ganhoValor" type="number" step="0.01" min="0" placeholder="30,00"></div>
+        <div class="field full"><label>Descrição</label><input id="ganhoDesc" placeholder="Ex.: Uber / iFood / entrega"></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" onclick="addGanho()">Adicionar ganho</button></div>
+    </div>
+
+    <div class="card">
+      <h3>Configuração do caixa</h3>
+      <div class="field"><label>Dinheiro disponível hoje (R$)</label><input id="caixaInput" type="number" step="0.01" min="0"></div>
+      <div class="actions"><button class="btn btn-primary" onclick="salvarCaixa()">Salvar caixa</button></div>
+      <div class="hint">Ex.: R$ 290,00, conforme sua planilha.</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Adicionar gasto</h3>
+      <div class="form-grid">
+        <div class="field"><label>Data</label><input id="gastoData" type="date"></div>
+        <div class="field"><label>Valor (R$)</label><input id="gastoValor" type="number" step="0.01" min="0" placeholder="120,00"></div>
+        <div class="field"><label>Motivo</label><input id="gastoMotivo" placeholder="Ex.: Vistoria"></div>
+        <div class="field"><label>Status</label>
+          <select id="gastoStatus"><option value="Pendente">Pendente</option><option value="Pago">Pago</option></select>
+        </div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" onclick="addGasto()">Adicionar gasto</button></div>
+    </div>
+
+    <div class="card">
+      <h3>Meta de ganhos</h3>
+      <div class="form-grid">
+        <div class="field"><label>Quanto precisa juntar (R$)</label><input id="metaValor" type="number" step="0.01" min="0" placeholder="1050"></div>
+        <div class="field"><label>Quanto faz por dia (R$)</label><input id="metaDia" type="number" step="0.01" min="0" placeholder="30"></div>
+      </div>
+      <div class="actions"><button class="btn btn-primary" onclick="calcularMeta()">Calcular</button></div>
+      <div id="metaResultado" class="result-box">
+        <div style="font-size:12px;color:#64748b">Exemplo</div>
+        <div class="result-big">R$ 1.050 ÷ R$ 30 = 35 dias</div>
+        <div style="font-size:12px;color:#64748b">O cálculo usa a média diária informada.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title"><h3>Resumo da semana</h3><span id="semanaLabel" class="hint"></span></div>
+    <div class="week-info">
+      <div><strong>Ganhos:</strong> <span id="semGanhos">R$ 0,00</span> &nbsp; | &nbsp; <strong>Gastos:</strong> <span id="semGastos">R$ 0,00</span> &nbsp; | &nbsp; <strong>Resultado:</strong> <span id="semResultado">R$ 0,00</span></div>
+      <div class="progress"><span id="progressBar"></span></div>
+      <div id="progressText" class="hint">Cadastre uma meta para acompanhar o progresso.</div>
+    </div>
+
+    <div class="week-balance">
+      <div class="balance-card">
+        <div class="balance-title">Total de entradas</div>
+        <div id="balEntradas" class="balance-value balance-entry">R$ 0,00</div>
+      </div>
+      <div class="balance-card">
+        <div class="balance-title">Total de gastos</div>
+        <div id="balGastos" class="balance-value balance-expense">R$ 0,00</div>
+      </div>
+      <div class="balance-card">
+        <div class="balance-title">Saldo da semana</div>
+        <div id="balSaldo" class="balance-value balance-result">R$ 0,00</div>
+      </div>
+      <div class="balance-card">
+        <div class="balance-title">Gasto sobre entrada</div>
+        <div id="balPercentual" class="balance-value">0%</div>
+      </div>
+    </div>
+
+    <div class="balance-bar" title="Comparação entre entradas e gastos">
+      <span id="balanceEntriesBar" class="entries" style="width:100%"></span>
+      <span id="balanceExpensesBar" class="expenses" style="width:0%"></span>
+    </div>
+
+    <div class="week-table">
+      <table>
+        <thead><tr><th>Dia</th><th>Entradas</th><th>Gastos</th><th>Saldo</th></tr></thead>
+        <tbody id="balancoDias"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-title">
+      <h3>Gastos cadastrados</h3>
+      <button class="small-btn" onclick="limparGastos()">Limpar gastos</button>
+    </div>
+    <div style="overflow:auto">
+      <table>
+        <thead><tr><th>Data</th><th>Valor</th><th>Motivo</th><th>Status</th><th></th></tr></thead>
+        <tbody id="gastosTabela"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">
+      <h3>Ganhos cadastrados</h3>
+      <button class="small-btn" onclick="limparGanhos()">Limpar ganhos</button>
+    </div>
+    <div style="overflow:auto">
+      <table>
+        <thead><tr><th>Data</th><th>Valor</th><th>Descrição</th><th></th></tr></thead>
+        <tbody id="ganhosTabela"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+<footer>Os dados ficam salvos neste navegador. Use “Exportar backup” para guardar uma cópia.</footer>
+</section>
+
+<script>
+const KEY = "fluxoCaixaCarlinhos_v1";
+let db = JSON.parse(localStorage.getItem(KEY) || '{"caixa":290,"gastos":[],"ganhos":[],"meta":0,"metaDia":30}');
+
+function brl(v){return Number(v||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"});}
+function hoje(){return new Date().toISOString().slice(0,10);}
+function dataBR(s){if(!s)return ""; const [y,m,d]=s.split("-"); return `${d}/${m}/${y}`;}
+function save(){localStorage.setItem(KEY,JSON.stringify(db)); render();}
+function login(){
+  const u=document.getElementById("loginUser").value.trim();
+  const p=document.getElementById("loginPass").value;
+  if(u==="Carlinhos" && p==="carlinhosmotoca"){
+    sessionStorage.setItem("fluxoLogin","1");
+    showApp();
+  }else document.getElementById("loginError").textContent="Usuário ou senha incorretos.";
+}
+function logout(){sessionStorage.removeItem("fluxoLogin");location.reload();}
+function showApp(){
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("caixaInput").value=db.caixa;
+  document.getElementById("ganhoData").value=hoje();
+  document.getElementById("gastoData").value=hoje();
+  document.getElementById("metaValor").value=db.meta||"";
+  document.getElementById("metaDia").value=db.metaDia||"";
+  render();
+}
+function dateRange(){
+  const mode=document.getElementById("periodo").value, now=new Date();
+  if(mode==="all") return null;
+  if(mode==="month") return {start:new Date(now.getFullYear(),now.getMonth(),1),end:new Date(now.getFullYear(),now.getMonth()+1,0,23,59,59)};
+  const day=now.getDay(), diff=day===0?-6:1-day;
+  const start=new Date(now); start.setHours(0,0,0,0); start.setDate(now.getDate()+diff);
+  const end=new Date(start); end.setDate(start.getDate()+6); end.setHours(23,59,59,999);
+  return {start,end};
+}
+function inPeriod(s){
+  const r=dateRange(); if(!r)return true;
+  const d=new Date(s+"T12:00:00"); return d>=r.start && d<=r.end;
+}
+function addGanho(){
+  const valor=Number(document.getElementById("ganhoValor").value);
+  if(!valor)return alert("Informe o valor do ganho.");
+  db.ganhos.push({id:Date.now(),data:document.getElementById("ganhoData").value||hoje(),valor,desc:document.getElementById("ganhoDesc").value.trim()||"Ganho"});
+  document.getElementById("ganhoValor").value="";document.getElementById("ganhoDesc").value="";save();
+}
+function addGasto(){
+  const valor=Number(document.getElementById("gastoValor").value);
+  if(!valor)return alert("Informe o valor do gasto.");
+  db.gastos.push({id:Date.now(),data:document.getElementById("gastoData").value||hoje(),valor,motivo:document.getElementById("gastoMotivo").value.trim()||"Gasto",status:document.getElementById("gastoStatus").value});
+  document.getElementById("gastoValor").value="";document.getElementById("gastoMotivo").value="";save();
+}
+function salvarCaixa(){db.caixa=Number(document.getElementById("caixaInput").value)||0;save();}
+function calcularMeta(){
+  const valor=Number(document.getElementById("metaValor").value)||0, dia=Number(document.getElementById("metaDia").value)||0;
+  db.meta=valor;db.metaDia=dia;save();
+  if(!valor||!dia){document.getElementById("metaResultado").innerHTML="<div class='result-big'>Informe os dois valores.</div>";return;}
+  const dias=Math.ceil(valor/dia), semanas=Math.ceil(dias/7);
+  document.getElementById("metaResultado").innerHTML=`<div style="font-size:12px;color:#64748b">Para juntar ${brl(valor)} fazendo ${brl(dia)} por dia:</div><div class="result-big">${dias} dias</div><div style="font-size:12px;color:#64748b">Aproximadamente ${semanas} semana${semanas===1?"":"s"}.</div>`;
+}
+function delGasto(id){db.gastos=db.gastos.filter(x=>x.id!==id);save();}
+function delGanho(id){db.ganhos=db.ganhos.filter(x=>x.id!==id);save();}
+function limparGastos(){if(confirm("Apagar todos os gastos cadastrados?")){db.gastos=[];save();}}
+function limparGanhos(){if(confirm("Apagar todos os ganhos cadastrados?")){db.ganhos=[];save();}}
+function render(){
+  document.getElementById("caixaInput").value=db.caixa;
+  const gastos=db.gastos.filter(x=>inPeriod(x.data)), ganhos=db.ganhos.filter(x=>inPeriod(x.data));
+  const ganhosTotal=ganhos.reduce((a,x)=>a+x.valor,0);
+  const gastosTotal=gastos.filter(x=>x.status==="Pendente").reduce((a,x)=>a+x.valor,0);
+  const saldo=db.caixa+ganhosTotal-gastosTotal;
+  document.getElementById("kpiCaixa").textContent=brl(db.caixa);
+  document.getElementById("kpiGanhos").textContent=brl(ganhosTotal);
+  document.getElementById("kpiGastos").textContent=brl(gastosTotal);
+  document.getElementById("kpiSaldo").textContent=brl(saldo);
+  const allWeekG=db.gastos.filter(x=>{const old=document.getElementById("periodo").value; document.getElementById("periodo").value="week"; const r=inPeriod(x.data);document.getElementById("periodo").value=old;return r;});
+  const allWeekGan=db.ganhos.filter(x=>{const old=document.getElementById("periodo").value; document.getElementById("periodo").value="week"; const r=inPeriod(x.data);document.getElementById("periodo").value=old;return r;});
+  const wg=allWeekGan.reduce((a,x)=>a+x.valor,0), wx=allWeekG.reduce((a,x)=>a+x.valor,0);
+  document.getElementById("semGanhos").textContent=brl(wg);document.getElementById("semGastos").textContent=brl(wx);document.getElementById("semResultado").textContent=brl(wg-wx);
+
+  // Balanço semanal: entradas x gastos, com detalhamento por dia.
+  document.getElementById("balEntradas").textContent=brl(wg);
+  document.getElementById("balGastos").textContent=brl(wx);
+  document.getElementById("balSaldo").textContent=brl(wg-wx);
+  const percentual=wg>0?(wx/wg)*100:0;
+  document.getElementById("balPercentual").textContent=percentual.toFixed(1)+"%";
+  const totalBar=wg+wx;
+  document.getElementById("balanceEntriesBar").style.width=totalBar?((wg/totalBar)*100)+"%":"100%";
+  document.getElementById("balanceExpensesBar").style.width=totalBar?((wx/totalBar)*100)+"%":"0%";
+
+  const dias={};
+  for(let i=0;i<7;i++){
+    const d=new Date();
+    const day=d.getDay(), diff=day===0?-6:1-day;
+    d.setDate(d.getDate()+diff+i);
+    const key=d.toISOString().slice(0,10);
+    dias[key]={entrada:0,gasto:0};
+  }
+  allWeekGan.forEach(x=>{if(dias[x.data])dias[x.data].entrada+=x.valor;});
+  allWeekG.forEach(x=>{if(dias[x.data])dias[x.data].gasto+=x.valor;});
+  document.getElementById("balancoDias").innerHTML=Object.entries(dias).map(([data,v])=>{
+    const saldo=v.entrada-v.gasto;
+    const dia=new Date(data+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short"}).replace(".","");
+    return `<tr><td>${dia} - ${dataBR(data)}</td><td class="green">${brl(v.entrada)}</td><td class="red">${brl(v.gasto)}</td><td class="${saldo>=0?"green":"red"}">${brl(saldo)}</td></tr>`;
+  }).join("");
+
+  const r=dateRange(); document.getElementById("semanaLabel").textContent=r?`${dataBR(r.start.toISOString().slice(0,10))} a ${dataBR(r.end.toISOString().slice(0,10))}`:"Todos os lançamentos";
+  const target=db.meta||0, pct=target?Math.min(100,(wg/target)*100):0;
+  document.getElementById("progressBar").style.width=pct+"%";
+  document.getElementById("progressText").textContent=target?`${brl(wg)} de ${brl(target)} (${pct.toFixed(0)}%)`:"Cadastre uma meta para acompanhar o progresso.";
+  const gt=document.getElementById("gastosTabela");
+  const sortedG=[...db.gastos].sort((a,b)=>b.data.localeCompare(a.data));
+  gt.innerHTML=sortedG.length?sortedG.map(x=>`<tr><td>${dataBR(x.data)}</td><td>${brl(x.valor)}</td><td>${esc(x.motivo)}</td><td><span class="badge ${x.status==="Pago"?"badge-pago":"badge-pendente"}">${x.status}</span></td><td><button class="small-btn" onclick="delGasto(${x.id})">Excluir</button></td></tr>`).join(""):`<tr><td colspan="5" class="empty">Nenhum gasto cadastrado.</td></tr>`;
+  const gan=document.getElementById("ganhosTabela"), sortedGan=[...db.ganhos].sort((a,b)=>b.data.localeCompare(a.data));
+  gan.innerHTML=sortedGan.length?sortedGan.map(x=>`<tr><td>${dataBR(x.data)}</td><td>${brl(x.valor)}</td><td>${esc(x.desc)}</td><td><button class="small-btn" onclick="delGanho(${x.id})">Excluir</button></td></tr>`).join(""):`<tr><td colspan="4" class="empty">Nenhum ganho cadastrado.</td></tr>`;
+  if(db.meta && db.metaDia) document.getElementById("metaResultado").innerHTML=`<div style="font-size:12px;color:#64748b">Para juntar ${brl(db.meta)} fazendo ${brl(db.metaDia)} por dia:</div><div class="result-big">${Math.ceil(db.meta/db.metaDia)} dias</div><div style="font-size:12px;color:#64748b">Aproximadamente ${Math.ceil(Math.ceil(db.meta/db.metaDia)/7)} semana(s).</div>`;
+}
+function esc(v){return String(v).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
+function exportar(){
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="backup_fluxo_caixa_carlinhos.json";a.click();URL.revokeObjectURL(a.href);
+}
+function importar(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();reader.onload=()=>{try{const x=JSON.parse(reader.result);if(!x.gastos||!x.ganhos)throw 0;db=x;save();alert("Backup importado.");}catch{alert("Arquivo de backup inválido.");}};reader.readAsText(file);
+}
+document.getElementById("loginPass").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
+if(sessionStorage.getItem("fluxoLogin")==="1")showApp();
+</script>
+</body>
+</html>
