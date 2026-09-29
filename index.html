@@ -86,7 +86,7 @@ footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
     <p>Controle interno de ganhos, gastos e metas.</p>
     <div class="field">
       <label>E-mail</label>
-      <input id="loginUser" autocomplete="username" placeholder="Digite seu e-mail">
+      <input id="loginUser" placeholder="Carlinhos ou e-mail" autocomplete="username" placeholder="Digite seu e-mail">
     </div>
     <div class="field">
       <label>Senha</label>
@@ -358,11 +358,12 @@ const USUARIO_PERMITIDO = "carlinhos_entregador@ifood.com";
 let autenticadoFirebase = false;
 let appJaAberto = false;
 function login(){
-  const email=document.getElementById("loginUser").value.trim();
+  let email=document.getElementById("loginUser").value.trim();
   const senha=document.getElementById("loginPass").value;
   const erro=document.getElementById("loginError");
   erro.textContent="";
-  if(!email || !senha){erro.textContent="Informe o e-mail e a senha.";return;}
+  if(!email || !senha){erro.textContent="Informe o usuário e a senha.";return;}
+  if(email.toLowerCase() === "carlinhos") email = USUARIO_PERMITIDO;
   if(email.toLowerCase() !== USUARIO_PERMITIDO){erro.textContent="Usuário não autorizado. Use o login do Carlinhos.";return;}
   if(!window.firebaseAuth || !window.firebaseSignIn){
     erro.textContent="Firebase ainda está conectando. Tente novamente.";
@@ -379,7 +380,7 @@ function login(){
         "auth/user-disabled":"Este usuário foi desativado no Firebase.",
         "auth/too-many-requests":"Muitas tentativas. Aguarde alguns minutos e tente novamente."
       };
-      erro.textContent=mensagens[e.code]||"Não foi possível fazer login. Verifique o Firebase Authentication.";
+      erro.textContent=mensagens[e.code]||(`Erro do Firebase: ${e.code || "desconhecido"}. ${e.message || "Verifique o Authentication."}`);
     })
     .finally(()=>{if(btn){btn.disabled=false;btn.textContent="Entrar";}});
 }
