@@ -85,8 +85,8 @@ footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
     <h1>Fluxo de Caixa</h1>
     <p>Controle interno de ganhos, gastos e metas.</p>
     <div class="field">
-      <label>Usuário</label>
-      <input id="loginUser" autocomplete="username" placeholder="Digite seu usuário">
+      <label>E-mail</label>
+      <input id="loginUser" autocomplete="username" placeholder="Digite seu e-mail">
     </div>
     <div class="field">
       <label>Senha</label>
@@ -250,27 +250,45 @@ footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
 
 
 <script type="module">
+/* =========================================================
+   CONFIGURAÇÃO FIREBASE — CONTROLE IFOOD
+   Projeto: controle-ifood
+   Login permitido: carlinhos_entregador@ifood.com
+   ========================================================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, doc, getDoc, setDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  getDatabase, ref, get, set
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDz8qIZpkaj5ygJJJwyAfYH_3xKFxsZcU8",
-  authDomain: "mto-webapp.firebaseapp.com",
-  projectId: "mto-webapp",
-  storageBucket: "mto-webapp.firebasestorage.app",
-  messagingSenderId: "998118770114",
-  appId: "1:998118770114:web:f29f30ed3c28ba5dc2c25b"
+  apiKey: "AIzaSyAFzkYZP8LDa42xnsGloOHQOxtm1qZ_vd4",
+  authDomain: "controle-ifood.firebaseapp.com",
+  databaseURL: "https://controle-ifood-default-rtdb.firebaseio.com",
+  projectId: "controle-ifood",
+  storageBucket: "controle-ifood.firebasestorage.app",
+  messagingSenderId: "121247066901",
+  appId: "1:121247066901:web:aad74fb730c73ef186571c"
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
-window.firebaseDB = getFirestore(firebaseApp);
-window.firebaseDoc = doc;
-window.firebaseGetDoc = getDoc;
-window.firebaseSetDoc = setDoc;
+window.firebaseDB = getDatabase(firebaseApp);
+window.firebaseAuth = getAuth(firebaseApp);
+window.firebaseRef = ref;
+window.firebaseGet = get;
+window.firebaseSet = set;
+window.firebaseSignIn = signInWithEmailAndPassword;
+window.firebaseSignOut = signOut;
 window.firebaseOnline = true;
+onAuthStateChanged(window.firebaseAuth, user => {
+  window.firebaseUser = user || null;
+  window.dispatchEvent(new CustomEvent("firebase-auth-changed", {detail:{user:user || null}}));
+});
 window.dispatchEvent(new Event("firebase-ready"));
+
+
 </script>
 
 <script>
@@ -287,11 +305,12 @@ function save(){
   clearTimeout(firebaseSaveTimer);
   firebaseSaveTimer = setTimeout(salvarNoFirebase, 250);
 }
+
 async function salvarNoFirebase(){
-  if(!window.firebaseOnline || !window.firebaseDB)return;
+  if(!window.firebaseOnline || !window.firebaseDB || !autenticadoFirebase)return;
   try{
-    await window.firebaseSetDoc(
-      window.firebaseDoc(window.firebaseDB, "fluxoCaixa", "carlinhos"),
+    await window.firebaseSet(
+      window.firebaseRef(window.firebaseDB, "carlinhos/fluxoCaixa"),
       {...db, atualizadoEm:new Date().toISOString()}
     );
     mostrarStatusFirebase("Sincronizado com Firebase", true);
@@ -301,18 +320,16 @@ async function salvarNoFirebase(){
   }
 }
 async function carregarDoFirebase(){
-  if(!window.firebaseOnline || !window.firebaseDB)return;
+  if(!window.firebaseOnline || !window.firebaseDB || !autenticadoFirebase)return;
   try{
-    const snap=await window.firebaseGetDoc(
-      window.firebaseDoc(window.firebaseDB, "fluxoCaixa", "carlinhos")
-    );
+    const snap=await window.firebaseGet(window.firebaseRef(window.firebaseDB, "carlinhos/fluxoCaixa"));
     if(snap.exists()){
-      const remoto=snap.data();
+      const remoto=snap.val();
       delete remoto.atualizadoEm;
       db={
         caixa:Number(remoto.caixa||0),
-        gastos:Array.isArray(remoto.gastos)?remoto.gastos:[],
-        ganhos:Array.isArray(remoto.ganhos)?remoto.ganhos:[],
+        gastos:Array.isArray(remoto.gastos)?remoto.gastos:Object.values(remoto.gastos||{}),
+        ganhos:Array.isArray(remoto.ganhos)?remoto.ganhos:Object.values(remoto.ganhos||{}),
         meta:Number(remoto.meta||0),
         metaDia:Number(remoto.metaDia||0)
       };
@@ -328,7 +345,7 @@ async function carregarDoFirebase(){
     }
   }catch(e){
     console.warn("Firebase: não foi possível carregar.", e);
-    mostrarStatusFirebase("Modo local: Firebase não sincronizado", false);
+    mostrarStatusFirebase("Firebase não sincronizado", false);
   }
 }
 function mostrarStatusFirebase(msg, ok){
@@ -337,16 +354,41 @@ function mostrarStatusFirebase(msg, ok){
   el.textContent=msg;
   el.style.color=ok?"#16803a":"#dc2626";
 }
+const USUARIO_PERMITIDO = "carlinhos_entregador@ifood.com";
+let autenticadoFirebase = false;
+let appJaAberto = false;
 function login(){
-  const u=document.getElementById("loginUser").value.trim();
-  const p=document.getElementById("loginPass").value;
-  if(u==="Carlinhos" && p==="carlinhosmotoca"){
-    sessionStorage.setItem("fluxoLogin","1");
-    showApp();
-  }else document.getElementById("loginError").textContent="Usuário ou senha incorretos.";
+  const email=document.getElementById("loginUser").value.trim();
+  const senha=document.getElementById("loginPass").value;
+  const erro=document.getElementById("loginError");
+  erro.textContent="";
+  if(!email || !senha){erro.textContent="Informe o e-mail e a senha.";return;}
+  if(email.toLowerCase() !== USUARIO_PERMITIDO){erro.textContent="Usuário não autorizado. Use o login do Carlinhos.";return;}
+  if(!window.firebaseAuth || !window.firebaseSignIn){
+    erro.textContent="Firebase ainda está conectando. Tente novamente.";
+    return;
+  }
+  const btn=document.querySelector(".login .btn-primary");
+  if(btn){btn.disabled=true;btn.textContent="Entrando...";}
+  window.firebaseSignIn(window.firebaseAuth,email,senha)
+    .catch(e=>{
+      console.error(e);
+      const mensagens={
+        "auth/invalid-credential":"E-mail ou senha incorretos.",
+        "auth/invalid-email":"Informe um e-mail válido.",
+        "auth/user-disabled":"Este usuário foi desativado no Firebase.",
+        "auth/too-many-requests":"Muitas tentativas. Aguarde alguns minutos e tente novamente."
+      };
+      erro.textContent=mensagens[e.code]||"Não foi possível fazer login. Verifique o Firebase Authentication.";
+    })
+    .finally(()=>{if(btn){btn.disabled=false;btn.textContent="Entrar";}});
 }
-function logout(){sessionStorage.removeItem("fluxoLogin");location.reload();}
+async function logout(){
+  try{if(window.firebaseAuth && window.firebaseSignOut) await window.firebaseSignOut(window.firebaseAuth);}
+  finally{location.reload();}
+}
 function showApp(){
+  appJaAberto=true;
   document.getElementById("login").classList.add("hidden");
   document.getElementById("app").classList.remove("hidden");
   document.getElementById("caixaInput").value=db.caixa;
@@ -356,6 +398,11 @@ function showApp(){
   document.getElementById("metaDia").value=db.metaDia||"";
   render();
   carregarDoFirebase();
+}
+function mostrarLogin(){
+  appJaAberto=false;
+  document.getElementById("app").classList.add("hidden");
+  document.getElementById("login").classList.remove("hidden");
 }
 function dateRange(){
   const mode=document.getElementById("periodo").value, now=new Date();
@@ -476,7 +523,25 @@ function importar(e){
   const reader=new FileReader();reader.onload=()=>{try{const x=JSON.parse(reader.result);if(!x.gastos||!x.ganhos)throw 0;db=x;save();alert("Backup importado.");}catch{alert("Arquivo de backup inválido.");}};reader.readAsText(file);
 }
 document.getElementById("loginPass").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
-if(sessionStorage.getItem("fluxoLogin")==="1")showApp();
+document.getElementById("loginUser").addEventListener("keydown",e=>{if(e.key==="Enter")login();});
+window.addEventListener("firebase-auth-changed", e=>{
+  const user=e.detail.user;
+  autenticadoFirebase=!!user && (user.email||"").trim().toLowerCase()===USUARIO_PERMITIDO;
+  if(user && !autenticadoFirebase){
+    if(window.firebaseAuth && window.firebaseSignOut) window.firebaseSignOut(window.firebaseAuth);
+    mostrarLogin();
+    document.getElementById("loginError").textContent="Este usuário do Firebase não tem permissão para acessar o sistema.";
+    return;
+  }
+  if(autenticadoFirebase){
+    document.getElementById("loginError").textContent="";
+    showApp();
+  }else{
+    mostrarLogin();
+  }
+});
+
+
 </script>
 </body>
 </html>
